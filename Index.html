@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台股交易損益試算器</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel standalone for React JSX rendering -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      input[type="number"]::-webkit-inner-spin-button,
+      input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      input[type="number"] {
+        -moz-appearance: textfield;
+      }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-slate-800 antialiased min-h-screen">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo } = React;
+
+        const IconCalculator = () => (
+          <svg className="w-6 h-6 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+            <line x1="8" y1="6" x2="16" y2="6"></line>
+            <line x1="16" y1="14" x2="16" y2="18"></line>
+            <path d="M16 10h.01M12 10h.01M8 10h.01M12 14h.01M8 14h.01M12 18h.01M8 18h.01"></path>
+          </svg>
+        );
+
+        const IconSettings = () => (
+          <svg className="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        );
+
+        const IconTrendingUp = () => (
+          <svg className="w-9 h-9 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>
+          </svg>
+        );
+
+        const IconTrendingDown = () => (
+          <svg className="w-9 h-9 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+            <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+            <polyline points="17 18 23 18 23 12"></polyline>
+          </svg>
+        );
+
+        const IconRefresh = () => (
+          <svg className="w-9 h-9 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <polyline points="23 20 23 14 17 14"></polyline>
+            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+          </svg>
+        );
+
+        const IconInfo = () => (
+          <svg className="w-3.5 h-3.5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        );
+
+        const IconSparkles = () => (
+          <svg className="w-4 h-4 inline-block text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"></path>
+          </svg>
+        );
+
+        const StockCalculator = () => {
+          const [buyPrice, setBuyPrice] = useState('');
+          const [sellPrice, setSellPrice] = useState('');
+          const [quantity, setQuantity] = useState('1000');
+          const [discount, setDiscount] = useState('2.8');
+          const [minFee, setMinFee] = useState('20');
+          const [taxRateType, setTaxRateType] = useState('0.003');
+
+          const parseInput = (val) => val === '' ? 0 : parseFloat(val);
+
+          const adjustQuantity = (amount) => {
+            const currentQty = parseInput(quantity);
+            const newQty = Math.max(0, currentQty + amount);
+            setQuantity(newQty.toString());
+          };
+
+          const results = useMemo(() => {
+            const pBuy = parseInput(buyPrice);
+            const pSell = parseInput(sellPrice);
+            const qty = parseInput(quantity);
+            const disc = parseInput(discount);
+            const minF = parseInput(minFee);
+            const taxR = parseFloat(taxRateType);
+
+            if (qty <= 0) return null;
+
+            const baseFeeRate = 0.001425;
+            const discountMultiplier = disc > 10 ? disc / 100 : disc / 10;
+            const effectiveMinF = qty < 1000 ? 1 : minF;
+
+            // 1. 買進計算 (採 Math.floor 無條件捨去)
+            const buyAmount = Math.floor(pBuy * qty);
+
+            let rawBuyFee = Math.floor(buyAmount * baseFeeRate);
+            if (rawBuyFee < effectiveMinF) rawBuyFee = effectiveMinF;
+
+            let buyFee = Math.floor(buyAmount * baseFeeRate * discountMultiplier);
+            if (buyFee < effectiveMinF) buyFee = effectiveMinF;
+            
+            const totalBuyCost = buyAmount + buyFee;
+
+            // 2. 賣出計算
+            let sellAmount = 0;
+            let rawSellFee = 0;
+            let sellFee = 0;
+            let tax = 0;
+            let netSellProceeds = 0;
+            let profit = 0;
+            let roi = 0;
+
+            if (pSell > 0) {
+              sellAmount = Math.floor(pSell * qty);
+              
+              rawSellFee = Math.floor(sellAmount * baseFeeRate);
+              if (rawSellFee < effectiveMinF) rawSellFee = effectiveMinF;
+
+              sellFee = Math.floor(sellAmount * baseFeeRate * discountMultiplier);
+              if (sellFee < effectiveMinF) sellFee = effectiveMinF;
+
+              tax = Math.floor(sellAmount * taxR);
+
+              netSellProceeds = sellAmount - sellFee - tax;
+              profit = netSellProceeds - totalBuyCost;
+              roi = totalBuyCost > 0 ? (profit / totalBuyCost) * 100 : 0;
+            }
+
+            // 3. 損益兩平價試算
+            const costFactor = 1 - (baseFeeRate * discountMultiplier) - taxR;
+            const breakEvenRaw = totalBuyCost / qty / costFactor;
+            const perShareBuyCost = totalBuyCost / qty;
+
+            // 總省下的手續費
+            const totalFeeSaved = (rawBuyFee - buyFee) + (pSell > 0 ? (rawSellFee - sellFee) : 0);
+            
+            return {
+              buyAmount,
+              rawBuyFee,
+              buyFee,
+              totalBuyCost,
+              sellAmount,
+              rawSellFee,
+              sellFee,
+              tax,
+              netSellProceeds,
+              profit,
+              roi,
+              breakEvenPrice: breakEvenRaw,
+              perShareBuyCost,
+              totalFeeSaved,
+              hasSellPrice: pSell > 0
+            };
+          }, [buyPrice, sellPrice, quantity, discount, minFee, taxRateType]);
+
+          const fmt = (num) => new Intl.NumberFormat('zh-TW').format(Math.round(num));
+          const fmtFloat = (num) => new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+
+          // 台股色彩慣例：紅漲綠跌
+          const getColorClass = (val) => {
+            if (val > 0) return 'text-red-600';
+            if (val < 0) return 'text-green-600';
+            return 'text-gray-600';
+          };
+
+          return (
+            <div className="max-w-2xl mx-auto p-4 md:py-8 font-sans">
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+                
+                {/* Header */}
+                <div className="bg-blue-600 p-4 text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <IconCalculator />
+                    <h1 className="text-xl font-bold tracking-wide">台股交易損益試算</h1>
+                  </div>
+                  <div className="text-xs bg-blue-700/50 px-2.5 py-1 rounded-full">即時計算</div>
+                </div>
+
+                {/* Settings Panel */}
+                <div className="p-5 border-b border-gray-100 bg-blue-50/50">
+                  <div className="flex items-center gap-2 mb-3 text-gray-700 font-semibold text-sm">
+                    <IconSettings />
+                    <span>交易設定</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    <div className="md:col-span-6">
+                      <label className="block text-xs text-gray-500 mb-1">券商手續費折扣 (折)</label>
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          step="0.1"
+                          value={discount}
+                          onChange={(e) => setDiscount(e.target.value)}
+                          className="w-full p-2 pr-28 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                          placeholder="例如 2.8"
+                        />
+                        <div className="absolute right-7 top-1.5 flex gap-1">
+                          <button onClick={() => setDiscount('10')} className="px-1.5 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600 border border-gray-200">無</button>
+                          <button onClick={() => setDiscount('3')} className="px-1.5 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600 border border-gray-200">3折</button>
+                          <button onClick={() => setDiscount('2.8')} className="px-1.5 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600 border border-gray-200">2.8折</button>
+                          <button onClick={() => setDiscount('2')} className="px-1.5 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600 border border-gray-200">2折</button>
+                        </div>
+                        <span className="absolute right-2.5 top-2 text-gray-400 text-xs">折</span>
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-xs text-gray-500 mb-1">最低手續費</label>
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          value={minFee}
+                          onChange={(e) => setMinFee(e.target.value)}
+                          className="w-full p-2 pr-6 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                        />
+                        <span className="absolute right-2.5 top-2 text-gray-400 text-xs">$</span>
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-4">
+                      <label className="block text-xs text-gray-500 mb-1">交易稅率</label>
+                      <select 
+                        value={taxRateType}
+                        onChange={(e) => setTaxRateType(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+                      >
+                        <option value="0.003">一般股票 (0.3%)</option>
+                        <option value="0.0015">當沖交易 (0.15%)</option>
+                        <option value="0.001">ETF (0.1%)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {}
+                <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="col-span-1 md:col-span-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      交易股數 (Shares)
+                    </label>
+                    <div className="flex gap-2 items-stretch">
+                      <button 
+                        onClick={() => adjustQuantity(-1000)}
+                        className="px-3.5 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 text-gray-600 transition-colors flex items-center justify-center gap-1 text-sm font-bold active:scale-95"
+                        title="減少1,000股"
+                      >
+                        -1k
+                      </button>
+                      
+                      <div className="relative flex-grow">
+                        <input 
+                          type="number" 
+                          value={quantity}
+                          onChange={(e) => setQuantity(e.target.value)}
+                          className="w-full p-3 pr-28 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                          placeholder="1000"
+                        />
+                        <div className="absolute right-3 top-3 flex gap-1.5">
+                           <button onClick={() => setQuantity('1000')} className="px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600">1張</button>
+                           <button onClick={() => setQuantity('500')} className="px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600">500股</button>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => adjustQuantity(1000)}
+                        className="px-3.5 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 text-gray-600 transition-colors flex items-center justify-center gap-1 text-sm font-bold active:scale-95"
+                        title="增加1,000股"
+                      >
+                        +1k
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">買進價格</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 font-bold">$</span>
+                      </div>
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        value={buyPrice}
+                        onChange={(e) => setBuyPrice(e.target.value)}
+                        className="pl-8 w-full p-3 text-lg border border-red-200 bg-red-50/50 rounded-lg focus:ring-2 focus:ring-red-500 outline-none font-mono text-red-700 font-bold"
+                        placeholder="輸入買價"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">賣出價格 (選填)</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 font-bold">$</span>
+                      </div>
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        value={sellPrice}
+                        onChange={(e) => setSellPrice(e.target.value)}
+                        className="pl-8 w-full p-3 text-lg border border-green-200 bg-green-50/50 rounded-lg focus:ring-2 focus:ring-green-500 outline-none font-mono text-green-700 font-bold"
+                        placeholder="輸入賣價"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col justify-center p-4 bg-gray-50 rounded-lg gap-2 border border-gray-200">
+                      <div>
+                        <span className="text-xs text-gray-500 mb-0.5 flex items-center gap-1">
+                          <IconInfo /> 每股買進成本 (含手續費)
+                        </span>
+                        <div className="text-lg font-bold text-gray-800 font-mono">
+                          {results && results.perShareBuyCost ? `$${fmtFloat(results.perShareBuyCost)}` : '--'}
+                        </div>
+                      </div>
+                      <div className="border-t border-gray-200 pt-2">
+                        <span className="text-xs text-gray-500 mb-0.5 flex items-center gap-1">
+                          <IconInfo /> 損益兩平價 (預估)
+                        </span>
+                        <div className="text-lg font-bold text-gray-800 font-mono">
+                          {results && results.breakEvenPrice ? `$${fmtFloat(results.breakEvenPrice)}` : '--'}
+                        </div>
+                      </div>
+                  </div>
+                </div>
+
+                {}
+                {results && (
+                  <div className="border-t border-gray-200 bg-white">
+                    <div className="grid grid-cols-2 divide-x divide-gray-100 border-b border-gray-100">
+                        <div className="p-4 text-center">
+                            <div className="text-xs text-gray-500 mb-1">買進總成本</div>
+                            <div className="text-lg font-bold text-gray-800 font-mono">${fmt(results.totalBuyCost)}</div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              含手續費 ${fmt(results.buyFee)}
+                              {results.rawBuyFee > results.buyFee && (
+                                <span className="ml-1 text-gray-400">(原價 ${fmt(results.rawBuyFee)})</span>
+                              )}
+                            </div>
+                        </div>
+                        <div className="p-4 text-center bg-gray-50/50">
+                            <div className="text-xs text-gray-500 mb-1">預估賣出淨收</div>
+                            <div className="text-lg font-bold text-gray-800 font-mono">
+                                {results.hasSellPrice ? `$${fmt(results.netSellProceeds)}` : '--'}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                               {results.hasSellPrice ? '已扣除手續費與稅' : '請輸入賣價以計算'}
+                            </div>
+                        </div>
+                    </div>
+
+                    {results.hasSellPrice && (
+                      <div className="p-6 text-center bg-gray-50/80 border-b border-gray-200">
+                         <div className="text-xs text-gray-500 mb-1">預估損益 (已扣除所有成本)</div>
+                         <div className={`text-4xl font-bold font-mono ${getColorClass(results.profit)} flex items-center justify-center gap-2`}>
+                            {results.profit > 0 ? <IconTrendingUp /> : results.profit < 0 ? <IconTrendingDown /> : <IconRefresh />}
+                            ${fmt(results.profit)}
+                         </div>
+                         <div className={`mt-2 text-sm font-bold ${getColorClass(results.roi)}`}>
+                            報酬率: {fmtFloat(results.roi)}%
+                         </div>
+                      </div>
+                    )}
+
+                    <div className="p-5">
+                       <h3 className="text-xs font-bold text-gray-600 mb-3 uppercase tracking-wider">費用明細</h3>
+                       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden text-sm">
+                          <div className="grid grid-cols-2 p-3 bg-gray-50 border-b border-gray-200 font-medium text-gray-600 text-xs">
+                            <div>項目</div>
+                            <div className="text-right">金額</div>
+                          </div>
+                          
+                          <div className="divide-y divide-gray-100">
+                            <div className="grid grid-cols-2 p-3 hover:bg-gray-50">
+                              <div className="text-gray-600">買進成交金額</div>
+                              <div className="text-right font-mono">${fmt(results.buyAmount)}</div>
+                            </div>
+                            <div className="grid grid-cols-2 p-3 hover:bg-gray-50">
+                              <div className="text-gray-600 flex items-center gap-1.5">
+                                  買進手續費 <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-medium">{discount}折</span>
+                              </div>
+                              <div className="text-right font-mono">
+                                {results.rawBuyFee > results.buyFee && (
+                                  <span className="text-gray-400 line-through text-xs mr-2 font-normal">
+                                    ${fmt(results.rawBuyFee)}
+                                  </span>
+                                )}
+                                <span className="text-red-600 font-medium">-${fmt(results.buyFee)}</span>
+                              </div>
+                            </div>
+                            
+                            {results.hasSellPrice && (
+                            <>
+                                <div className="grid grid-cols-2 p-3 hover:bg-gray-50">
+                                <div className="text-gray-600">賣出成交金額</div>
+                                <div className="text-right font-mono">${fmt(results.sellAmount)}</div>
+                                </div>
+                                <div className="grid grid-cols-2 p-3 hover:bg-gray-50">
+                                <div className="text-gray-600 flex items-center gap-1.5">
+                                    賣出手續費 <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-medium">{discount}折</span>
+                                </div>
+                                <div className="text-right font-mono">
+                                  {results.rawSellFee > results.sellFee && (
+                                    <span className="text-gray-400 line-through text-xs mr-2 font-normal">
+                                      ${fmt(results.rawSellFee)}
+                                    </span>
+                                  )}
+                                  <span className="text-red-600 font-medium">-${fmt(results.sellFee)}</span>
+                                </div>
+                                </div>
+                                <div className="grid grid-cols-2 p-3 hover:bg-gray-50">
+                                <div className="text-gray-600 flex items-center gap-1.5">
+                                     證交稅 <span className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded font-medium">{(parseFloat(taxRateType)*100).toFixed(2)}%</span>
+                                </div>
+                                <div className="text-right font-mono text-red-600">-${fmt(results.tax)}</div>
+                                </div>
+                            </>
+                            )}
+                          </div>
+                       </div>
+
+                       {results.totalFeeSaved > 0 && (
+                         <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-center text-xs text-emerald-800 font-medium flex items-center justify-center gap-1.5 shadow-sm">
+                           <IconSparkles />
+                           券商折扣為您共省下 <span className="font-bold text-sm font-mono text-emerald-900">${fmt(results.totalFeeSaved)}</span> 手續費！
+                         </div>
+                       )}
+                    </div>
+
+                  </div>
+                )}
+                
+                <div className="p-4 bg-gray-50 text-[11px] text-center text-gray-400 border-t border-gray-100">
+                   * 此試算結果僅供參考，實際費用請以券商對帳單為準。<br/>
+                   * 手續費採單筆無條件捨去計算，整股未滿 {minFee} 元以 {minFee} 元計，零股(未滿1000股)最低 1 元。
+                </div>
+
+              </div>
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<StockCalculator />);
+    </script>
+</body>
+</html>
